@@ -1,7 +1,11 @@
 import re
 import os
 import unittest
+import logging
 from poeditor.client import POEditorAPI, POEditorException
+
+
+logger = logging.getLogger(__name__)
 
 
 class TestClient(unittest.TestCase):
@@ -29,6 +33,9 @@ class TestClient(unittest.TestCase):
         client = POEditorAPI(api_token=self.API_TOKEN)
 
         # Project:
+        projects = client.list_projects()
+        self.assertTrue(isinstance(projects, list))
+
         self.new_project_id = client.create_project(
             name='test project',
             description='Created by test_scenario method'
@@ -249,9 +256,12 @@ class TestClient(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self, 'new_project_id'):
-            print "From POEditor, you have to delete project id={}. " \
-                  "There is no API method to delete project.".format(
-                      self.new_project_id)
+            logger.info(
+                "From POEditor, you have to delete project id={}. "
+                "There is no API method to delete project.".format(
+                    self.new_project_id
+                )
+            )
 
         if hasattr(self, 'file_path'):
             try:

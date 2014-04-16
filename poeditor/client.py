@@ -84,6 +84,20 @@ class POEditorAPI(object):
 
         return data
 
+    def _project_formatter(self, data):
+        """
+        Project object
+        """
+        open_ = False if not data['open'] or data['open'] == '0' else True
+        public = False if not data['public'] or data['public'] == '0' else True
+        return {
+            'created': datetime.strptime(data['created'], '%Y-%m-%d %H:%M:%S'),
+            'id': int(data['id']),
+            'name': data['name'],
+            'open': open_,
+            'public': public,
+        }
+
     def list_projects(self):
         """
         Returns the list of projects owned by user.
@@ -91,7 +105,8 @@ class POEditorAPI(object):
         data = self._run(
             action="list_projects"
         )
-        return data.get('list', [])
+        projects = data.get('list', [])
+        return [self._project_formatter(item) for item in projects]
 
     def create_project(self, name, description=None):
         """
@@ -113,16 +128,7 @@ class POEditorAPI(object):
             action="view_project",
             id=project_id
         )
-        data = data['item']
-        open_ = False if not data['open'] or data['open'] == '0' else True
-        public = False if not data['public'] or data['public'] == '0' else True
-        return {
-            'created': datetime.strptime(data['created'], '%Y-%m-%d %H:%M:%S'),
-            'id': int(data['id']),
-            'name': data['name'],
-            'open': open_,
-            'public': public,
-        }
+        return self._project_formatter(data['item'])
 
     def list_project_languages(self, project_id):
         """
