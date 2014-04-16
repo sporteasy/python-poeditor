@@ -8,6 +8,6 @@
     >>> projects = client.list_projects()
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from client import POEditorAPI, POEditorException, POEditorArgsException
