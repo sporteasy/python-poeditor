@@ -28,3 +28,6 @@ dump_*
 dump.rdb
 /bin/grunt/node_modules/
 node_modules/
+build/
+dist/
+poeditor.egg-info/

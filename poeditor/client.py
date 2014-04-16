@@ -1,5 +1,11 @@
 """
-Poeditor API Client
+    Client Interface for POEditor API (https://poeditor.com).
+
+    Usage:
+
+    >>> from poeditor import POEditorAPI
+    >>> client = POEditorAPI(api_token='my_token')
+    >>> projects = client.list_projects()
 """
 
 import json
@@ -8,7 +14,13 @@ import tempfile
 from restkit import Resource, request
 
 
+__all__ = ['POEditorException', 'POEditorArgsException', 'POEditorAPI']
+
+
 class POEditorException(Exception):
+    """
+    POEditor API exception
+    """
     def __init__(self, error_code, status, message):
         self.exp = u'POEditorException'
         self.error_code = error_code
@@ -21,6 +33,9 @@ class POEditorException(Exception):
 
 
 class POEditorArgsException(Exception):
+    """
+    POEditor args method exception
+    """
     def __init__(self, message):
         self.exp = u'POEditorArgsException'
         self.message = message
@@ -53,6 +68,9 @@ class POEditorAPI(object):
         self.api_token = api_token
 
     def _run(self, action, headers=None, **kwargs):
+        """
+        Requests API
+        """
         res = Resource(self.HOST)
         payload = kwargs
         payload.update({'action': action, 'api_token': self.api_token})

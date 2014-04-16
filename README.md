@@ -7,7 +7,15 @@ Overview
 
 API Client Interface for [POEditor API](https://poeditor.com/api_reference/).
 
+[POEditor](https://poeditor.com/) is a quick and sleek web-based software
+localization platform, designed for happy translators and project managers.
 
+Usage
+-----
+
+    >>> from poeditor import POEditorAPI
+    >>> client = POEditorAPI(api_token='my_token')
+    >>> projects = client.list_projects()
 
 Testing
 -------
