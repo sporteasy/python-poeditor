@@ -12,7 +12,7 @@ setup(
     author="Charles Vallantin Dulac",
     author_email="charles.vdulac@gmail.com",
     description="Client Interface for POEditor API (https://poeditor.com).",
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     include_package_data=True,
     url='https://github.com/sporteasy/python-poeditor',
     classifiers=[
