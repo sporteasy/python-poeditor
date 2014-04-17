@@ -60,6 +60,9 @@ class POEditorAPI(object):
     UPDATING_TERMS_DEFINITIONS = 'terms_definitions'
     UPDATING_DEFINITIONS = 'definitions'
 
+    # in seconds. Upload: No more than one request every 30 seconds
+    MIN_UPLOAD_INTERVAL = 30
+
     def __init__(self, api_token):
         """
         All requests to the API must contain the parameter api_token.
