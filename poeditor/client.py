@@ -339,12 +339,14 @@ class POEditorAPI(object):
         return data['details']
 
     def export(self, project_id, language_code, file_type='po', filters=None,
-               tags=None):
+               tags=None, local_file=None):
         """
         Return terms / translations
 
         filters - filter by self._filter_by
         tags - filter results by tags;
+        local_file - save content into it. If None, save content into
+            random temp file.
 
         >>> tags = 'name-of-tag'
         >>> tags = ["name-of-tag"]
@@ -374,16 +376,20 @@ class POEditorAPI(object):
 
         # Download file content:
         res = request(file_url)
-        local_file = tempfile.NamedTemporaryFile(
-            delete=False, suffix='.{}'.format(file_type))
-        with res.body_stream() as body:
-            while True:
-                data = body.read(1024)
-                if not data:
-                    break
-                local_file.write(data)
-        local_file.close()
-        return file_url, local_file.name
+        if not local_file:
+            tmp_file = tempfile.NamedTemporaryFile(
+                delete=False, suffix='.{}'.format(file_type))
+            tmp_file.close()
+            local_file = tmp_file.name
+
+        with open(local_file, 'w+b') as po_file:
+            with res.body_stream() as body:
+                while True:
+                    data = body.read(1024)
+                    if not data:
+                        break
+                    po_file.write(data)
+        return file_url, local_file
 
     def _upload(self, project_id, updating, file_path, language_code=None,
                 overwrite=False, sync_terms=False, tags=None):
