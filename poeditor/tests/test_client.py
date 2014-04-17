@@ -262,6 +262,8 @@ class TestClient(unittest.TestCase):
                     self.new_project_id
                 )
             )
+            logger.info("Just call: https://poeditor.com/projects/"
+                        "delete?id={}".format(self.new_project_id))
 
         if hasattr(self, 'file_path'):
             try:
