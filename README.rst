@@ -24,9 +24,17 @@ You can also install the development version with::
 Usage
 -----
 
-  >>> from poeditor import POEditorAPI
-  >>> client = POEditorAPI(api_token='my_token')
-  >>> projects = client.list_projects()
+```
+from poeditor import POEditorAPI
+client = POEditorAPI(api_token='my_token')
+projects = client.list_projects()
+# create a new project
+client.create_project("name", "description")
+# get project details
+project = client.view_project_details("project id")
+# list project languages
+languages = client.list_project_languages("project id")
+```
 
 Testing
 -------
