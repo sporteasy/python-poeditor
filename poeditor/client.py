@@ -52,7 +52,7 @@ class POEditorAPI(object):
 
     SUCCESS_CODE = "success"
     FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'apple_strings', 'android_strings',
-                  'resx', 'properties', 'json']
+                  'resx', 'resw', 'properties', 'json']
     FILTER_BY = ['translated', 'untranslated', 'fuzzy', 'not_fuzzy',
                  'automatic', 'not_automatic']
 
