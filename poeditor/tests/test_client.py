@@ -21,7 +21,7 @@ class TestClient(unittest.TestCase):
             client.list_projects()
         self.assertEqual(
             context.exception.message,
-            u"Status 'fail', code 4011: Invalid API Key"
+            u"Status 'fail', code 4011: Invalid API Token"
         )
 
         # good token

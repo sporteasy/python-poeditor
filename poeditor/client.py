@@ -139,7 +139,7 @@ class POEditorAPI(object):
             name=name,
             description=description
         )
-        return data['response']['item']['id']
+        return data['response']['item']
 
     def view_project_details(self, project_id):
         """
