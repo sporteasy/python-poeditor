@@ -52,7 +52,7 @@ class POEditorAPI(object):
 
     SUCCESS_CODE = "success"
     FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'apple_strings', 'android_strings',
-                  'resx', 'resw', 'properties', 'json']
+                  'resx', 'resw', 'properties', 'json', 'key_value_json']
     FILTER_BY = ['translated', 'untranslated', 'fuzzy', 'not_fuzzy',
                  'automatic', 'not_automatic']
 
@@ -392,7 +392,7 @@ class POEditorAPI(object):
         return file_url, local_file
 
     def _upload(self, project_id, updating, file_path, language_code=None,
-                overwrite=False, sync_terms=False, tags=None):
+                overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
         """
         Internal: updates terms / translations
         """
@@ -426,6 +426,7 @@ class POEditorAPI(object):
         language_code = language_code or ''
         sync_terms = '1' if sync_terms else '0'
         overwrite = '1' if overwrite else '0'
+        fuzzy_trigger = '1' if fuzzy_trigger else '0'
         project_id = str(project_id)
 
         data = self._run(
@@ -437,12 +438,13 @@ class POEditorAPI(object):
             tags=tags,
             sync_terms=sync_terms,
             overwrite=overwrite,
+            fuzzy_trigger=fuzzy_trigger,
             headers=headers
         )
         return data['details']
 
     def update_terms(self, project_id, file_path=None, language_code=None,
-                     overwrite=False, sync_terms=False, tags=None):
+                     overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
         """
         Updates terms - No more than one request every 30 seconds
 
@@ -455,6 +457,8 @@ class POEditorAPI(object):
             "new": for the terms which aren't already in the project and
             "obsolete": for the terms which are in the project but not in the
                 imported file
+        fuzzy_trigger: set it to True to mark corresponding translations from the
+            other languages as fuzzy for the updated values
         """
         return self._upload(
             project_id=project_id,
@@ -463,12 +467,13 @@ class POEditorAPI(object):
             language_code=language_code,
             overwrite=overwrite,
             sync_terms=sync_terms,
-            tags=tags
+            tags=tags,
+            fuzzy_trigger=fuzzy_trigger
         )
 
     def update_terms_definitions(self, project_id, file_path=None,
                                  language_code=None, overwrite=False,
-                                 sync_terms=False, tags=None):
+                                 sync_terms=False, tags=None, fuzzy_trigger=None):
         """
         Updates terms definitions - No more than one request every 30 seconds
 
@@ -481,6 +486,8 @@ class POEditorAPI(object):
             "new": for the terms which aren't already in the project and
             "obsolete": for the terms which are in the project but not in the
                 imported file
+        fuzzy_trigger: set it to True to mark corresponding translations from the
+            other languages as fuzzy for the updated values
         """
         return self._upload(
             project_id=project_id,
@@ -489,22 +496,26 @@ class POEditorAPI(object):
             language_code=language_code,
             overwrite=overwrite,
             sync_terms=sync_terms,
-            tags=tags
+            tags=tags,
+            fuzzy_trigger=fuzzy_trigger
         )
 
     def update_definitions(self, project_id, file_path=None,
-                           language_code=None, overwrite=False):
+                           language_code=None, overwrite=False, fuzzy_trigger=None):
         """
         Updates terms definitions - No more than one request every 30 seconds
 
         overwrite: set it to True if you want to overwrite definitions
+        fuzzy_trigger: set it to True to mark corresponding translations from the
+            other languages as fuzzy for the updated values
         """
         return self._upload(
             project_id=project_id,
             updating=self.UPDATING_DEFINITIONS,
             file_path=file_path,
             language_code=language_code,
-            overwrite=overwrite
+            overwrite=overwrite,
+            fuzzy_trigger=fuzzy_trigger
         )
 
     def available_languages(self):
