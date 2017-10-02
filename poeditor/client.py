@@ -11,7 +11,9 @@
 import json
 from datetime import datetime
 import tempfile
-from restkit import Resource, request
+
+
+import requests
 
 
 __all__ = ['POEditorException', 'POEditorArgsException', 'POEditorAPI']
@@ -74,19 +76,18 @@ class POEditorAPI(object):
         """
         Requests API
         """
-        res = Resource(self.HOST)
         payload = kwargs
         payload.update({'action': action, 'api_token': self.api_token})
-        response = res.post(payload=payload, headers=headers)
+        response = requests.post(self.HOST, data=payload, headers=headers)
 
-        if response.status_int != 200:
+        if response.status_code != 200:
             raise POEditorException(
                 status='fail',
-                error_code=response.status_int,
+                error_code=response.status_code,
                 message=response.status
             )
 
-        data = json.loads(response.body_string().decode('utf-8'))
+        data = response.json()
 
         if 'response' not in data:
             raise POEditorException(
@@ -375,7 +376,7 @@ class POEditorAPI(object):
         file_url = data['item']
 
         # Download file content:
-        res = request(file_url)
+        res = request.get(file_url, stream=True)
         if not local_file:
             tmp_file = tempfile.NamedTemporaryFile(
                 delete=False, suffix='.{}'.format(file_type))
@@ -383,12 +384,9 @@ class POEditorAPI(object):
             local_file = tmp_file.name
 
         with open(local_file, 'w+b') as po_file:
-            with res.body_stream() as body:
-                while True:
-                    data = body.read(1024)
-                    if not data:
-                        break
-                    po_file.write(data)
+            for chunk in res.iter_content(1024):
+                po_file.write(chunk)
+
         return file_url, local_file
 
     def _upload(self, project_id, updating, file_path, language_code=None,
