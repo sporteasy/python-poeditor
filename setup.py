@@ -1,9 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from pip.download import PipSession
+from pip.req import parse_requirements
 from setuptools import setup, find_packages
+
 import poeditor
 
+
+install_requires = []
+dependency_links = []
+
+# Inject requirements from requirements.txt into setup.py
+filename = 'requirements.txt'
+requirements_file = parse_requirements(filename, session=PipSession())
+for req in requirements_file:
+    install_requires.append(str(req.req))
+    if req.link:
+        dependency_links.append(str(req.link))
 
 setup(
     name='poeditor',
@@ -26,7 +40,8 @@ setup(
         'Programming Language :: Python :: 2.7',
         "Topic :: Software Development :: Localization",
     ],
-    install_requires=['restkit'],
+    install_requires=install_requires,
+    dependency_links=dependency_links,
     license='MIT',
     test_suite="nose.collector",
 )
