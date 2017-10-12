@@ -24,9 +24,10 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
         "Topic :: Software Development :: Localization",
     ],
-    install_requires=['restkit'],
+    install_requires=['requests'],
     license='MIT',
     test_suite="nose.collector",
 )
