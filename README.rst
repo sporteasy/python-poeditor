@@ -9,6 +9,8 @@ API Client Interface for `POEditor API <https://poeditor.com/api_reference/>`_.
 `POEditor <https://poeditor.com/>`_ is a quick and sleek web-based software
 localization platform, designed for happy translators and project managers.
 
+Support Python 2 and Python 3.
+
 Installation
 ------------
 
@@ -47,3 +49,8 @@ key from your POEditor account. You'll find it in `My Account > API Access <http
 
 **Note**: there is no API method to delete a project. So, you must delete test
 project by hand.
+
+License
+-------
+
+MIT License (MIT)
