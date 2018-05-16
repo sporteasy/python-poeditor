@@ -364,9 +364,13 @@ class POEditorAPI(object):
             raise POEditorArgsException(
                 u'content_type: file format {}'.format(self.FILE_TYPES))
 
-        if filters and filters not in self.FILTER_BY:
+        if filters and isinstance(filters, str) and filters not in self.FILTER_BY:
             raise POEditorArgsException(
                 u"filters - filter results by {}".format(self.FILTER_BY))
+        elif filters and set(filters).difference(set(self.FILTER_BY)):
+            raise POEditorArgsException(
+                u"filters - filter results by {}".format(self.FILTER_BY))
+            
 
         data = self._run(
             action="export",
