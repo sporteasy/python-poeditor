@@ -47,9 +47,6 @@ key from your POEditor account. You'll find it in `My Account > API Access <http
   $ export POEDITOR_TOKEN=my_token
   $ nosetests
 
-**Note**: there is no API method to delete a project. So, you must delete test
-project by hand.
-
 License
 -------
 
