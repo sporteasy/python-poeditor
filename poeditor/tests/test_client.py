@@ -2,7 +2,7 @@ import re
 import os
 import unittest
 import logging
-from poeditor.client import POEditorAPI, POEditorException
+from poeditor.client import POEditorAPI, POEditorException, POEditorArgsException
 
 
 logger = logging.getLogger(__name__)
@@ -196,6 +196,29 @@ class TestClient(unittest.TestCase):
             data = file_read.read()
         self.assertIn('Welcome to my new website', data)
         self.assertIn('first form', data)
+
+        # Export with filters
+        with self.assertRaises(POEditorArgsException) as context:
+            client.export(
+                project_id=self.new_project_id,
+                language_code='fr',
+                file_type='po',
+                filters = ["translated", "maybe_fuzzy"]
+            )
+        self.assertIn(u"filters - filter results by", context.exception.message)
+
+        file_url, not_fuzzy_path = client.export(
+            project_id=self.new_project_id,
+            language_code='fr',
+            file_type='po',
+            filters = ["translated", "not_fuzzy"]
+        )
+
+        with open(not_fuzzy_path, 'r') as file_read:
+            data = file_read.read()
+        self.assertNotIn('Welcome to my new website', data)
+        self.assertNotIn('first form', data)
+        
 
         # Import
         # Just a quick update before:
