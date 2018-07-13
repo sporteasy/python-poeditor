@@ -274,7 +274,7 @@ class POEditorAPI(object):
 
     def view_project_terms(self, project_id, language_code=None):
         """
-        Clears reference language from project
+        Returns project's terms and translations if the argument language is provided.
         """
         data = self._run(
             url_path="terms/list",
