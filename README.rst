@@ -4,7 +4,7 @@ Python POEditor
 Overview
 --------
 
-API Client Interface for `POEditor API <https://poeditor.com/api_reference/>`_.
+API Client Interface for `POEditor API <https://poeditor.com/docs/api/>`_.
 
 `POEditor <https://poeditor.com/>`_ is a quick and sleek web-based software
 localization platform, designed for happy translators and project managers.

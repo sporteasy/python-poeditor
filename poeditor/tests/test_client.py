@@ -2,6 +2,7 @@ import re
 import os
 import unittest
 import logging
+
 from poeditor.client import POEditorAPI, POEditorException, POEditorArgsException
 
 
@@ -15,13 +16,13 @@ class TestClient(unittest.TestCase):
 
     def test_authentication(self):
         # bad token
-        client = POEditorAPI(api_token="1e72d3ae2c67a2160a7e87979ae9c98d")
+        client = POEditorAPI(api_token="BAD_TOKEN")
 
         with self.assertRaises(POEditorException) as context:
             client.list_projects()
         self.assertEqual(
             context.exception.message,
-            u"Status 'fail', code 4011: Invalid API Token"
+            "Status 'fail', code 4011: Invalid API Token"
         )
 
         # good token
@@ -163,17 +164,11 @@ class TestClient(unittest.TestCase):
             language_code='fr',
             data=[
                 {
-                    "term": {
-                        "term": "Welcome to my new website",
-                        "context": ""
-                    },
-                    "definition": {
-                        "forms": [
-                            "first form",
-                            "second form",
-                            "and so on"
-                        ],
-                        "fuzzy": "1/0"
+                    "term": "Welcome to my new website",
+                    "context": "",
+                    "translation": {
+                        "content": "Bienvenue sur mon site",
+                        "fuzzy": 1
                     }
                 }
             ]
@@ -190,12 +185,12 @@ class TestClient(unittest.TestCase):
         )
 
         self.assertTrue(
-            file_url.startswith('https://poeditor.com/api/download/file/'))
+            file_url.startswith('https://api.poeditor.com/v2/download/file/'))
         self.assertTrue(os.path.isfile(self.file_path))
         with open(self.file_path, 'r') as file_read:
             data = file_read.read()
         self.assertIn('Welcome to my new website', data)
-        self.assertIn('first form', data)
+        self.assertIn('Bienvenue sur mon site', data)
 
         # Export with filters
         with self.assertRaises(POEditorArgsException) as context:
@@ -203,22 +198,21 @@ class TestClient(unittest.TestCase):
                 project_id=self.new_project_id,
                 language_code='fr',
                 file_type='po',
-                filters = ["translated", "maybe_fuzzy"]
+                filters=["translated", "maybe_fuzzy"]
             )
-        self.assertIn(u"filters - filter results by", context.exception.message)
+        self.assertIn("filters - filter results by", context.exception.message)
 
         file_url, not_fuzzy_path = client.export(
             project_id=self.new_project_id,
             language_code='fr',
             file_type='po',
-            filters = ["translated", "not_fuzzy"]
+            filters=["translated", "not_fuzzy"]
         )
 
         with open(not_fuzzy_path, 'r') as file_read:
             data = file_read.read()
         self.assertNotIn('Welcome to my new website', data)
-        self.assertNotIn('first form', data)
-        
+        self.assertNotIn('Bienvenue sur mon site', data)
 
         # Import
         # Just a quick update before:
@@ -227,10 +221,10 @@ class TestClient(unittest.TestCase):
         with open(self.file_path, "w") as sources:
             for line in lines:
                 sources.write(
-                    re.sub(r'^msgstr "first form"', 'msgstr "Bienvenue"', line)
+                    re.sub(r'^msgstr "Bienvenue sur mon site"', 'msgstr "Bienvenue!"', line)
                 )
 
-        details = client.update_terms_definitions(
+        details = client.update_terms_translations(
             project_id=self.new_project_id,
             file_path=self.file_path,
             language_code='fr',
@@ -239,23 +233,23 @@ class TestClient(unittest.TestCase):
         )
 
         expected_dict = {
-            u'definitions': {
-                u'added': 0,
-                u'parsed': 1,
-                u'updated': 1
+            'translations': {
+                'added': 0,
+                'parsed': 1,
+                'updated': 1
             },
-            u'terms': {
-                u'added': 0,
-                u'deleted': 0,
-                u'parsed': 2
+            'terms': {
+                'added': 0,
+                'deleted': 0,
+                'parsed': 2
             }
         }
         self.assertDictEqual(details, expected_dict)
 
         # Languages:
         languages = client.available_languages()
-        self.assertTrue(isinstance(languages, dict))
-        self.assertIn('French', languages)
+        self.assertTrue(isinstance(languages, list))
+        self.assertIn('French', [lang['name'] for lang in languages])
 
         # Contributors
         contributors = client.list_contributors(
@@ -279,17 +273,21 @@ class TestClient(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self, 'new_project_id'):
+            client = POEditorAPI(api_token=self.API_TOKEN)
             logger.info(
-                "From POEditor, you have to delete project id={}. "
-                "There is no API method to delete project.".format(
+                "Deleting test project project_id={}. ".format(
                     self.new_project_id
                 )
             )
-            logger.info("Just call: https://poeditor.com/projects/"
-                        "delete?id={}".format(self.new_project_id))
+            client.delete_project(self.new_project_id)
 
         if hasattr(self, 'file_path'):
             try:
+                logger.info(
+                    "Removing temp test file file_path={}. ".format(
+                        self.file_path
+                    )
+                )
                 os.remove(self.file_path)
             except:
                 pass

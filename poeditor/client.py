@@ -9,12 +9,32 @@
 """
 
 import json
-from datetime import datetime
-import tempfile
-
 import requests
+import sys
+import tempfile
+import warnings
+
+from datetime import datetime
 
 __all__ = ['POEditorException', 'POEditorArgsException', 'POEditorAPI']
+
+
+if sys.version_info < (3, 2):
+    from datetime import timedelta
+
+    def parse_datetime(dt_string):
+        # Hacky and not really equivalent to the Python3.2 version but will do for most use cases,
+        # that way we can avoid adding an extra dependency like dateutil or iso8601
+        ret = datetime.strptime(dt_string[:19], '%Y-%m-%dT%H:%M:%S')
+        if dt_string[19] == '+':
+           ret -= timedelta(hours=int(dt_string[20:22]), minutes=int(dt_string[22:]))
+        elif dt_string[19] == '-':
+           ret += timedelta(hours=int(dt_string[20:22]), minutes=int(dt_string[22:]))
+        return ret
+else:
+    # https://docs.python.org/3/whatsnew/3.2.html#datetime-and-time
+    def parse_datetime(dt_string):
+        return datetime.strptime(dt_string, '%Y-%m-%dT%H:%M:%S%z')
 
 
 class POEditorException(Exception):
@@ -22,9 +42,9 @@ class POEditorException(Exception):
     POEditor API exception
     """
     def __init__(self, error_code, status, message):
-        self.exp = u'POEditorException'
+        self.exp = 'POEditorException'
         self.error_code = error_code
-        self.message = u"Status '{}', code {}: {}".format(
+        self.message = "Status '{}', code {}: {}".format(
             status, error_code, message)
         super(POEditorException, self).__init__()
 
@@ -37,7 +57,7 @@ class POEditorArgsException(Exception):
     POEditor args method exception
     """
     def __init__(self, message):
-        self.exp = u'POEditorArgsException'
+        self.exp = 'POEditorArgsException'
         self.message = message
         super(POEditorArgsException, self).__init__()
 
@@ -45,10 +65,10 @@ class POEditorArgsException(Exception):
 class POEditorAPI(object):
     """
     Connect your software to POEditor with its simple API
-    Please refers to https://poeditor.com/api_reference/ if you have questions
+    Please refers to https://poeditor.com/docs/api if you have questions
     """
 
-    HOST = "https://poeditor.com/api/"
+    HOST = "https://api.poeditor.com/v2/"
 
     SUCCESS_CODE = "success"
     FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'apple_strings', 'android_strings',
@@ -58,8 +78,8 @@ class POEditorAPI(object):
                  'automatic', 'not_automatic']
 
     UPDATING_TERMS = 'terms'
-    UPDATING_TERMS_DEFINITIONS = 'terms_definitions'
-    UPDATING_DEFINITIONS = 'definitions'
+    UPDATING_TERMS_TRANSLATIONS = 'terms_translations'
+    UPDATING_TRANSLATIONS = 'translations'
 
     # in seconds. Upload: No more than one request every 30 seconds
     MIN_UPLOAD_INTERVAL = 30
@@ -71,17 +91,14 @@ class POEditorAPI(object):
         """
         self.api_token = api_token
 
-    def _run(self, action, headers=None, **kwargs):
-        """
-        Requests API
-        """
-        payload = kwargs
-        payload.update({'action': action, 'api_token': self.api_token})
+    def _construct_url(self, path):
+        return '{}{}'.format(self.HOST, path)
+
+    def _make_request(self, url, payload, headers=None):
+        kwargs = {}
         if payload.get('file'):
-            file = {'file': payload.pop('file')}
-            response = requests.post(url=self.HOST, data=payload, headers=headers, files=file)
-        else:
-            response = requests.post(url=self.HOST, data=payload, headers=headers)
+            kwargs['files'] = {'file': payload.pop('file')}
+        response = requests.post(url, data=payload, headers=headers, **kwargs)
 
         if response.status_code != 200:
             raise POEditorException(
@@ -90,13 +107,13 @@ class POEditorAPI(object):
                 message=response.reason
             )
 
-        data = json.loads(response.text)
+        data = response.json()
 
         if 'response' not in data:
             raise POEditorException(
                 status='fail',
                 error_code=-1,
-                message=u'"response" key is not present'
+                message='"response" key is not present'
             )
 
         if 'status' in data['response'] and \
@@ -109,28 +126,64 @@ class POEditorAPI(object):
 
         return data
 
+    def _run(self, url_path, headers=None, **kwargs):
+        """
+        Requests API
+        """
+        url = self._construct_url(url_path)
+
+        payload = kwargs
+        payload.update({'api_token': self.api_token})
+
+        return self._make_request(url, payload, headers)
+
+    def _apiv1_run(self, action, headers=None, **kwargs):
+        """
+        Kept for backwards compatibility of this client
+        Could not find how to reproduce the "clear_reference_language" v1 action with the v2 API.
+        Calling v2 projects/update with language='' or language=None did not work.
+        """
+        warnings.warn(
+            "POEditor API v1 is deprecated. Use POEditorAPI._run method to call API v2",
+            DeprecationWarning, stacklevel=2
+        )
+
+        url = "https://poeditor.com/api/"
+        payload = kwargs
+        payload.update({'action': action, 'api_token': self.api_token})
+
+        return self._make_request(url, payload, headers)
+
     def _project_formatter(self, data):
         """
         Project object
         """
         open_ = False if not data['open'] or data['open'] == '0' else True
         public = False if not data['public'] or data['public'] == '0' else True
-        return {
-            'created': datetime.strptime(data['created'], '%Y-%m-%d %H:%M:%S'),
+        output = {
+            'created': parse_datetime(data['created']),
             'id': int(data['id']),
             'name': data['name'],
             'open': open_,
             'public': public,
         }
 
+        # the detail view returns more info than the list view
+        # see https://poeditor.com/docs/api#projects_view
+        for key in ['description', 'reference_language', 'terms']:
+            if key in data:
+                output[key] = data[key]
+
+        return output
+
     def list_projects(self):
         """
         Returns the list of projects owned by user.
         """
         data = self._run(
-            action="list_projects"
+            url_path="projects/list"
         )
-        projects = data.get('list', [])
+        projects = data['result'].get('projects', [])
         return [self._project_formatter(item) for item in projects]
 
     def create_project(self, name, description=None):
@@ -139,38 +192,49 @@ class POEditorAPI(object):
         """
         description = description or ''
         data = self._run(
-            action="create_project",
+            url_path="projects/add",
             name=name,
             description=description
         )
-        return data['response']['item']
+        return data['result']['project']['id']
+
+    def delete_project(self, project_id):
+        """
+        Deletes the project from the account.
+        You must be the owner of the project.
+        """
+        self._run(
+            url_path="projects/delete",
+            id=project_id,
+        )
+        return True
 
     def view_project_details(self, project_id):
         """
         Returns project's details.
         """
         data = self._run(
-            action="view_project",
+            url_path="projects/view",
             id=project_id
         )
-        return self._project_formatter(data['item'])
+        return self._project_formatter(data['result']['project'])
 
     def list_project_languages(self, project_id):
         """
         Returns project languages and percentage of translation done for each.
         """
         data = self._run(
-            action="list_languages",
+            url_path="languages/list",
             id=project_id
         )
-        return data.get('list', [])
+        return data['result'].get('languages', [])
 
     def add_language_to_project(self, project_id, language_code):
         """
         Adds a new language to project
         """
         self._run(
-            action="add_language",
+            url_path="languages/add",
             id=project_id,
             language=language_code
         )
@@ -181,7 +245,7 @@ class POEditorAPI(object):
         Deletes existing language from project
         """
         self._run(
-            action="delete_language",
+            url_path="languages/delete",
             id=project_id,
             language=language_code
         )
@@ -192,9 +256,9 @@ class POEditorAPI(object):
         Sets a reference language to project
         """
         self._run(
-            action="set_reference_language",
+            url_path="projects/update",
             id=project_id,
-            language=language_code
+            reference_language=language_code
         )
         return True
 
@@ -202,7 +266,7 @@ class POEditorAPI(object):
         """
         Clears reference language from project
         """
-        self._run(
+        self._apiv1_run(
             action="clear_reference_language",
             id=project_id
         )
@@ -213,68 +277,70 @@ class POEditorAPI(object):
         Clears reference language from project
         """
         data = self._run(
-            action="view_terms",
+            url_path="terms/list",
             id=project_id,
             language=language_code
         )
-        return data.get('list', [])
+        return data['result'].get('terms', [])
 
     def add_terms(self, project_id, data):
         """
         Adds terms to project.
         >>> data = [
             {
-                "term":"Add new list",
-                "context":"",
-                "reference":"/projects",
-                "plural":""
+                "term": "Add new list",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "",
+                "comment": ""
             },
             {
-                "term":"one project found",
-                "context":"",
-                "reference":"/projects",
-                "plural":"%d projects found",
-                "tags":[
+                "term": "one project found",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "%d projects found",
+                "comment": "Make sure you translate the plural forms",
+                "tags": [
                     "first_tag",
                     "second_tag"
                 ]
             },
             {
-                "term":"Show all projects",
-                "context":"",
-                "reference":"/projects",
-                "plural":"",
-                "tags":"just_a_tag"
+                "term": "Show all projects",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "",
+                "tags": "just_a_tag"
             }
         ]
         """
         data = self._run(
-            action="add_terms",
+            url_path="terms/add",
             id=project_id,
             data=json.dumps(data)
         )
-        return data['details']
+        return data['result']['terms']
 
     def delete_terms(self, project_id, data):
         """
         Deletes terms from project.
         >>> data = [
             {
-                "term":"one project found",
-                "context":""
+                "term": "one project found",
+                "context": ""
             },
             {
-                "term":"Show all projects",
-                "context":"form"
+                "term": "Show all projects",
+                "context": "form"
             }
         ]
         """
         data = self._run(
-            action="delete_terms",
+            url_path="terms/delete",
             id=project_id,
             data=json.dumps(data)
         )
-        return data['details']
+        return data['result']['terms']
 
     def sync_terms(self, project_id, data):
         """
@@ -283,64 +349,65 @@ class POEditorAPI(object):
         added).
         >>> data = [
             {
-                "term":"Add new list",
-                "context":"",
-                "reference":"/projects",
-                "plural":""
+                "term": "Add new list",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "",
+                "comment": ""
             },
             {
-                "term":"one project found",
-                "context":"",
-                "reference":"/projects",
-                "plural":"%d projects found",
-                "tags":[
+                "term": "one project found",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "%d projects found",
+                "comment": "Make sure you translate the plural forms",
+                "tags": [
                     "first_tag",
                     "second_tag"
                 ]
             },
             {
-                "term":"Show all projects",
-                "context":"",
-                "reference":"/projects",
-                "plural":"",
-                "tags":"just_a_tag"
+                "term": "Show all projects",
+                "context": "",
+                "reference": "\/projects",
+                "plural": "",
+                "tags": "just_a_tag"
             }
         ]
         """
         data = self._run(
-            action="sync_terms",
+            url_path="projects/sync",
             id=project_id,
             data=json.dumps(data)
         )
-        return data['details']
+        return data['result']['terms']
 
-    def update_project_language(self, project_id, language_code, data):
+    def update_project_language(self, project_id, language_code, data, fuzzy_trigger=None):
         """
         Inserts / overwrites translations.
         >>> data = [
             {
-                "term":{
-                "term":"%d Projects available",
-                "context":"project list"
-            },
-                "definition":{
-                    "forms":[
-                        "first form",
-                        "second form",
-                        "and so on"
-                    ],
-                    "fuzzy":"1/0"
+                "term": "Projects",
+                "context": "project list",
+                "translation": {
+                    "content": "Des projets",
+                    "fuzzy": 0
                 }
             }
         ]
         """
+        kwargs = {}
+        if fuzzy_trigger is not None:
+            kwargs['fuzzy_trigger'] = fuzzy_trigger
+
         data = self._run(
-            action="update_language",
+            url_path="languages/update",
             id=project_id,
             language=language_code,
-            data=json.dumps(data)
+            data=json.dumps(data),
+            **kwargs
         )
-        return data['details']
+        return data['result']['translations']
 
     def export(self, project_id, language_code, file_type='po', filters=None,
                tags=None, local_file=None):
@@ -362,25 +429,25 @@ class POEditorAPI(object):
         """
         if file_type not in self.FILE_TYPES:
             raise POEditorArgsException(
-                u'content_type: file format {}'.format(self.FILE_TYPES))
+                'content_type: file format {}'.format(self.FILE_TYPES))
 
         if filters and isinstance(filters, str) and filters not in self.FILTER_BY:
             raise POEditorArgsException(
-                u"filters - filter results by {}".format(self.FILTER_BY))
+                "filters - filter results by {}".format(self.FILTER_BY))
         elif filters and set(filters).difference(set(self.FILTER_BY)):
             raise POEditorArgsException(
-                u"filters - filter results by {}".format(self.FILTER_BY))
-            
+                "filters - filter results by {}".format(self.FILTER_BY))
 
         data = self._run(
-            action="export",
+            url_path="projects/export",
             id=project_id,
             language=language_code,
             type=file_type,
             filters=filters,
             tags=tags
         )
-        file_url = data['item']
+        # The link of the file (expires after 10 minutes).
+        file_url = data['result']['url']
 
         # Download file content:
         res = requests.get(file_url, stream=True)
@@ -399,28 +466,30 @@ class POEditorAPI(object):
                 overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
         """
         Internal: updates terms / translations
+
+        File uploads are limited to one every 30 seconds
         """
         options = [
             self.UPDATING_TERMS,
-            self.UPDATING_TERMS_DEFINITIONS,
-            self.UPDATING_DEFINITIONS
+            self.UPDATING_TERMS_TRANSLATIONS,
+            self.UPDATING_TRANSLATIONS
         ]
         if updating not in options:
             raise POEditorArgsException(
-                u'Updating arg must be in {}'.format(options)
+                'Updating arg must be in {}'.format(options)
             )
 
         options = [
-            self.UPDATING_TERMS_DEFINITIONS,
-            self.UPDATING_DEFINITIONS
+            self.UPDATING_TERMS_TRANSLATIONS,
+            self.UPDATING_TRANSLATIONS
         ]
         if language_code is None and updating in options:
             raise POEditorArgsException(
-                u'Language code is required only if updating is '
-                u'terms_definitions or definitions)'
+                'Language code is required only if updating is '
+                'terms_translations or translations)'
             )
 
-        if updating == self.UPDATING_DEFINITIONS:
+        if updating == self.UPDATING_TRANSLATIONS:
             tags = None
             sync_terms = None
 
@@ -432,34 +501,34 @@ class POEditorAPI(object):
         fuzzy_trigger = '1' if fuzzy_trigger else '0'
         project_id = str(project_id)
 
-        data = self._run(
-            action="upload",
-            id=project_id,
-            language=language_code,
-            file=open(file_path, 'r+b'),
-            updating=updating,
-            tags=tags,
-            sync_terms=sync_terms,
-            overwrite=overwrite,
-            fuzzy_trigger=fuzzy_trigger,
-            headers=None
-        )
-        return data['details']
+        with open(file_path, 'r+b') as local_file:
+            data = self._run(
+                url_path="projects/upload",
+                id=project_id,
+                language=language_code,
+                file=local_file,
+                updating=updating,
+                tags=tags,
+                sync_terms=sync_terms,
+                overwrite=overwrite,
+                fuzzy_trigger=fuzzy_trigger
+            )
+        return data['result']
 
     def update_terms(self, project_id, file_path=None, language_code=None,
                      overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
         """
-        Updates terms - No more than one request every 30 seconds
+        Updates terms
 
-        overwrite: set it to True if you want to overwrite definitions
+        overwrite: set it to True if you want to overwrite translations
         sync_terms: set it to True if you want to sync your terms (terms that
             are not found in the uploaded file will be deleted from project
-            and the new ones added).
-        tags: add tags to the project terms. you can use the following keys:
-            "all": for the all the imported terms,
-            "new": for the terms which aren't already in the project and
-            "obsolete": for the terms which are in the project but not in the
-                imported file
+            and the new ones added). Ignored if updating = translations
+        tags: Add tags to the project terms; available when updating terms or terms_translations;
+              you can use the following keys: "all" - for the all the imported terms, "new" - for
+              the terms which aren't already in the project, "obsolete" - for the terms which are
+              in the project but not in the imported file and "overwritten_translations" - for the
+              terms for which translations change
         fuzzy_trigger: set it to True to mark corresponding translations from the
             other languages as fuzzy for the updated values
         """
@@ -477,24 +546,41 @@ class POEditorAPI(object):
     def update_terms_definitions(self, project_id, file_path=None,
                                  language_code=None, overwrite=False,
                                  sync_terms=False, tags=None, fuzzy_trigger=None):
-        """
-        Updates terms definitions - No more than one request every 30 seconds
+        warnings.warn(
+            "This method has been renamed update_terms_translations",
+            DeprecationWarning, stacklevel=2
+        )
+        return self.update_terms_translations(
+            project_id,
+            file_path,
+            language_code,
+            overwrite,
+            sync_terms,
+            tags,
+            fuzzy_trigger
+        )
 
-        overwrite: set it to True if you want to overwrite definitions
+    def update_terms_translations(self, project_id, file_path=None,
+                                 language_code=None, overwrite=False,
+                                 sync_terms=False, tags=None, fuzzy_trigger=None):
+        """
+        Updates terms translations
+
+        overwrite: set it to True if you want to overwrite translations
         sync_terms: set it to True if you want to sync your terms (terms that
             are not found in the uploaded file will be deleted from project
-            and the new ones added).
-        tags: add tags to the project terms. you can use the following keys:
-            "all": for the all the imported terms,
-            "new": for the terms which aren't already in the project and
-            "obsolete": for the terms which are in the project but not in the
-                imported file
+            and the new ones added). Ignored if updating = translations
+        tags: Add tags to the project terms; available when updating terms or terms_translations;
+              you can use the following keys: "all" - for the all the imported terms, "new" - for
+              the terms which aren't already in the project, "obsolete" - for the terms which are
+              in the project but not in the imported file and "overwritten_translations" - for the
+              terms for which translations change
         fuzzy_trigger: set it to True to mark corresponding translations from the
             other languages as fuzzy for the updated values
         """
         return self._upload(
             project_id=project_id,
-            updating=self.UPDATING_TERMS_DEFINITIONS,
+            updating=self.UPDATING_TERMS_TRANSLATIONS,
             file_path=file_path,
             language_code=language_code,
             overwrite=overwrite,
@@ -505,8 +591,22 @@ class POEditorAPI(object):
 
     def update_definitions(self, project_id, file_path=None,
                            language_code=None, overwrite=False, fuzzy_trigger=None):
+        warnings.warn(
+            "This method has been renamed update_translations",
+            DeprecationWarning, stacklevel=2
+        )
+        return self.update_translations(
+            project_id,
+            file_path,
+            language_code,
+            overwrite,
+            fuzzy_trigger
+        )
+
+    def update_translations(self, project_id, file_path=None,
+                            language_code=None, overwrite=False, fuzzy_trigger=None):
         """
-        Updates terms definitions - No more than one request every 30 seconds
+        Updates translations
 
         overwrite: set it to True if you want to overwrite definitions
         fuzzy_trigger: set it to True to mark corresponding translations from the
@@ -514,7 +614,7 @@ class POEditorAPI(object):
         """
         return self._upload(
             project_id=project_id,
-            updating=self.UPDATING_DEFINITIONS,
+            updating=self.UPDATING_TRANSLATIONS,
             file_path=file_path,
             language_code=language_code,
             overwrite=overwrite,
@@ -526,27 +626,27 @@ class POEditorAPI(object):
         Returns a list containing all the available languages
         """
         data = self._run(
-            action="available_languages"
+            url_path="languages/available"
         )
-        return data.get('list', {})
+        return data['result'].get('languages', [])
 
     def list_contributors(self, project_id=None, language_code=None):
         """
         Returns the list of contributors
         """
         data = self._run(
-            action="list_contributors",
+            url_path="contributors/list",
             id=project_id,
             language=language_code
         )
-        return data.get('list', [])
+        return data['result'].get('contributors', [])
 
     def add_contributor(self, project_id, name, email, language_code):
         """
         Adds a contributor to a project language
         """
         self._run(
-            action="add_contributor",
+            url_path="contributors/add",
             id=project_id,
             name=name,
             email=email,
@@ -559,10 +659,22 @@ class POEditorAPI(object):
         Adds a contributor to a project language
         """
         self._run(
-            action="add_contributor",
+            url_path="contributors/add",
             id=project_id,
             name=name,
             email=email,
             admin=True
+        )
+        return True
+
+    def remove_contributor(self, project_id, email, language):
+        """
+        Removes a contributor
+        """
+        self._run(
+            url_path="contributors/remove",
+            id=project_id,
+            email=email,
+            language=language
         )
         return True
