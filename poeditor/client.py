@@ -140,8 +140,7 @@ class POEditorAPI(object):
     def _apiv1_run(self, action, headers=None, **kwargs):
         """
         Kept for backwards compatibility of this client
-        Could not find how to reproduce the "clear_reference_language" v1 action with the v2 API.
-        Calling v2 projects/update with language='' or language=None did not work.
+        See "self.clear_reference_language"
         """
         warnings.warn(
             "POEditor API v1 is deprecated. Use POEditorAPI._run method to call API v2",
@@ -265,6 +264,10 @@ class POEditorAPI(object):
     def clear_reference_language(self, project_id):
         """
         Clears reference language from project
+
+        Could not find how to reproduce the "clear_reference_language" v1 action with the v2 API.
+        Calling v2 projects/update with reference_language='' or reference_language=None did not work.
+        https://poeditor.com/docs/api#projects_update
         """
         self._apiv1_run(
             action="clear_reference_language",
