@@ -11,6 +11,6 @@
 __version__ = "1.1.0"
 
 try:
-    from client import POEditorAPI, POEditorException, POEditorArgsException
+    from .client import POEditorAPI, POEditorException, POEditorArgsException
 except ImportError:
     pass
