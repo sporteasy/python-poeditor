@@ -71,9 +71,9 @@ class POEditorAPI(object):
     HOST = "https://api.poeditor.com/v2/"
 
     SUCCESS_CODE = "success"
-    FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'apple_strings', 'android_strings',
-                  'resx', 'resw', 'properties', 'json', 'key_value_json',
-                  'xliff', 'xmb', 'xtb']
+    FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'csv', 'resx', 'resw', 'android_strings',
+                  'apple_strings', 'xliff', 'properties', 'key_value_json', 'json',
+                  'xmb', 'xtb']
     FILTER_BY = ['translated', 'untranslated', 'fuzzy', 'not_fuzzy',
                  'automatic', 'not_automatic', 'proofread', 'not_proofread']
 
