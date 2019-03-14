@@ -73,9 +73,9 @@ class POEditorAPI(object):
     SUCCESS_CODE = "success"
     FILE_TYPES = ['po', 'pot', 'mo', 'xls', 'apple_strings', 'android_strings',
                   'resx', 'resw', 'properties', 'json', 'key_value_json',
-                  'xliff']
+                  'xliff', 'xmb', 'xtb']
     FILTER_BY = ['translated', 'untranslated', 'fuzzy', 'not_fuzzy',
-                 'automatic', 'not_automatic']
+                 'automatic', 'not_automatic', 'proofread', 'not_proofread']
 
     UPDATING_TERMS = 'terms'
     UPDATING_TERMS_TRANSLATIONS = 'terms_translations'
