@@ -197,6 +197,27 @@ class POEditorAPI(object):
         )
         return data['result']['project']['id']
 
+    def update_project(self, project_id, name=None, description=None,
+                       reference_language=None):
+        """
+        Updates project settings (name, description, reference language)
+        If optional parameters are not sent, their respective fields are not updated.
+        """
+        kwargs = {}
+        if name is not None:
+            kwargs['name'] = name
+        if description is not None:
+            kwargs['description'] = description
+        if reference_language is not None:
+            kwargs['reference_language'] = reference_language
+
+        data = self._run(
+            url_path="projects/update",
+            id=project_id,
+            **kwargs
+        )
+        return data['result']['project']['id']
+
     def delete_project(self, project_id):
         """
         Deletes the project from the account.
@@ -220,7 +241,8 @@ class POEditorAPI(object):
 
     def list_project_languages(self, project_id):
         """
-        Returns project languages and percentage of translation done for each.
+        Returns project languages, percentage of translation done for each and the
+        datetime (UTC - ISO 8601) when the last change was made.
         """
         data = self._run(
             url_path="languages/list",
@@ -254,12 +276,7 @@ class POEditorAPI(object):
         """
         Sets a reference language to project
         """
-        self._run(
-            url_path="projects/update",
-            id=project_id,
-            reference_language=language_code
-        )
-        return True
+        return self.update_project(project_id, reference_language=language_code)
 
     def clear_reference_language(self, project_id):
         """
@@ -324,6 +341,44 @@ class POEditorAPI(object):
         )
         return data['result']['terms']
 
+    def update_terms(self, project_id, data, fuzzy_trigger=None):
+        """
+        Updates project terms. Lets you change the text, context, reference, plural and tags.
+
+        >>> data = [
+                {
+                    "term": "Add new list",
+                    "context": "",
+                    "new_term": "Save list",
+                    "new_context": "",
+                    "reference": "\/projects",
+                    "plural": "",
+                    "comment": "",
+                    "tags": [
+                        "first_tag",
+                        "second_tag"
+                    ]
+                },
+                {
+                    "term": "Display list",
+                    "context": "",
+                    "new_term": "Show list",
+                    "new_context": ""
+                }
+            ]
+        """
+        kwargs = {}
+        if fuzzy_trigger is not None:
+            kwargs['fuzzy_trigger'] = fuzzy_trigger
+
+        data = self._run(
+            url_path="terms/update",
+            id=project_id,
+            data=json.dumps(data),
+            **kwargs
+        )
+        return data['result']['terms']
+
     def delete_terms(self, project_id, data):
         """
         Deletes terms from project.
@@ -345,11 +400,42 @@ class POEditorAPI(object):
         )
         return data['result']['terms']
 
+    def add_comment(self, project_id, data):
+        """
+        Adds comments to existing terms.
+        >>> data = [
+                {
+                    "term": "Add new list",
+                    "context": "",
+                    "comment": "This is a button"
+                },
+                {
+                    "term": "one project found",
+                    "context": "",
+                    "comment": "Make sure you translate the plural forms"
+                },
+                {
+                    "term": "Show all projects",
+                    "context": "",
+                    "comment": "This is a button"
+                }
+            ]
+        """
+        data = self._run(
+            url_path="terms/add_comment",
+            id=project_id,
+            data=json.dumps(data)
+        )
+        return data['result']['terms']
+
     def sync_terms(self, project_id, data):
         """
         Syncs your project with the array you send (terms that are not found
         in the dict object will be deleted from project and the new ones
         added).
+        Please use with caution. If wrong data is sent, existing terms and their
+        translations might be irreversibly lost.
+
         >>> data = [
             {
                 "term": "Add new list",
@@ -626,7 +712,8 @@ class POEditorAPI(object):
 
     def available_languages(self):
         """
-        Returns a list containing all the available languages
+        Returns a comprehensive list of all languages supported by POEditor.
+        You can find it here (https://poeditor.com/docs/languages), too.
         """
         data = self._run(
             url_path="languages/available"
