@@ -19,22 +19,8 @@ from datetime import datetime
 __all__ = ['POEditorException', 'POEditorArgsException', 'POEditorAPI']
 
 
-if sys.version_info < (3, 2):
-    from datetime import timedelta
-
-    def parse_datetime(dt_string):
-        # Hacky and not really equivalent to the Python3.2 version but will do for most use cases,
-        # that way we can avoid adding an extra dependency like dateutil or iso8601
-        ret = datetime.strptime(dt_string[:19], '%Y-%m-%dT%H:%M:%S')
-        if dt_string[19] == '+':
-           ret -= timedelta(hours=int(dt_string[20:22]), minutes=int(dt_string[22:]))
-        elif dt_string[19] == '-':
-           ret += timedelta(hours=int(dt_string[20:22]), minutes=int(dt_string[22:]))
-        return ret
-else:
-    # https://docs.python.org/3/whatsnew/3.2.html#datetime-and-time
-    def parse_datetime(dt_string):
-        return datetime.strptime(dt_string, '%Y-%m-%dT%H:%M:%S%z')
+def parse_datetime(dt_string):
+    return datetime.strptime(dt_string, '%Y-%m-%dT%H:%M:%S%z')
 
 
 class POEditorException(Exception):
