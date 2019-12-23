@@ -455,7 +455,8 @@ class POEditorAPI(object):
         filters - filter by self._filter_by
         tags - filter results by tags;
         local_file - save content into it. If None, save content into
-            random temp file.
+            random temp file. If False, don't download at all. The
+            client application should close the file.
 
         >>> tags = 'name-of-tag'
         >>> tags = ["name-of-tag"]
@@ -487,18 +488,22 @@ class POEditorAPI(object):
         # The link of the file (expires after 10 minutes).
         file_url = data['result']['url']
 
-        # Download file content:
-        res = requests.get(file_url, stream=True)
-        if not local_file:
-            tmp_file = tempfile.NamedTemporaryFile(
+        if local_file is None:
+            local_file = tempfile.NamedTemporaryFile(
                 delete=False, suffix='.{}'.format(file_type))
-            tmp_file.close()
-            local_file = tmp_file.name
 
-        with open(local_file, 'w+b') as po_file:
+        if local_file:
+            # Download file content:
+            res = requests.get(file_url, stream=True)
+            if callable(getattr(local_file, 'write', None)):  # Does it quack?
+                po_file = local_file
+            else:
+                po_file = open(local_file, 'w+b')
             for data in res.iter_content(chunk_size=1024):
                 po_file.write(data)
-        return file_url, local_file
+        else:
+            po_file = None
+        return file_url, po_file
 
     def _upload(self, project_id, updating, file_path, language_code=None,
                 overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
