@@ -451,12 +451,16 @@ class POEditorAPI(object):
         return data['result']['translations']
 
     def export(self, project_id, language_code, file_type='po', filters=None,
-               tags=None, local_file=None):
+               tags=None, order=None, options=None, local_file=None):
         """
         Return terms / translations
 
         filters - filter by self._filter_by
         tags - filter results by tags;
+        order - Set it to 'terms' to order results by 'terms' alphabetically.
+        options - Set specific advanced options for particular formats (where these exist).
+            The value must be a JSON array of objects. Can be used to export in Android XML
+            format without wrapping the strings in quotes: options=[{"unquoted": 1}]
         local_file - save content into it. If None, save content into
             random temp file. If False, don't download at all.
 
@@ -485,7 +489,9 @@ class POEditorAPI(object):
             language=language_code,
             type=file_type,
             filters=filters,
-            tags=tags
+            tags=tags,
+            order=order,
+            options=options
         )
         # The link of the file (expires after 10 minutes).
         file_url = data['result']['url']
