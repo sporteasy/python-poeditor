@@ -342,44 +342,6 @@ class POEditorAPI(object):
         )
         return data['result']['terms']
 
-    def update_terms(self, project_id, data, fuzzy_trigger=None):
-        """
-        Updates project terms. Lets you change the text, context, reference, plural and tags.
-
-        >>> data = [
-                {
-                    "term": "Add new list",
-                    "context": "",
-                    "new_term": "Save list",
-                    "new_context": "",
-                    "reference": "\/projects",
-                    "plural": "",
-                    "comment": "",
-                    "tags": [
-                        "first_tag",
-                        "second_tag"
-                    ]
-                },
-                {
-                    "term": "Display list",
-                    "context": "",
-                    "new_term": "Show list",
-                    "new_context": ""
-                }
-            ]
-        """
-        kwargs = {}
-        if fuzzy_trigger is not None:
-            kwargs['fuzzy_trigger'] = fuzzy_trigger
-
-        data = self._run(
-            url_path="terms/update",
-            id=project_id,
-            data=json.dumps(data),
-            **kwargs
-        )
-        return data['result']['terms']
-
     def delete_terms(self, project_id, data):
         """
         Deletes terms from project.
