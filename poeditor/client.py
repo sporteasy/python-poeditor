@@ -14,6 +14,7 @@ import sys
 import tempfile
 import warnings
 
+from contextlib import nullcontext
 from datetime import datetime
 
 __all__ = ['POEditorException', 'POEditorArgsException', 'POEditorAPI']
@@ -455,8 +456,7 @@ class POEditorAPI(object):
         filters - filter by self._filter_by
         tags - filter results by tags;
         local_file - save content into it. If None, save content into
-            random temp file. If False, don't download at all. The
-            client application should close the file.
+            random temp file. If False, don't download at all.
 
         >>> tags = 'name-of-tag'
         >>> tags = ["name-of-tag"]
@@ -488,22 +488,29 @@ class POEditorAPI(object):
         # The link of the file (expires after 10 minutes).
         file_url = data['result']['url']
 
-        if local_file is None:
-            local_file = tempfile.NamedTemporaryFile(
-                delete=False, suffix='.{}'.format(file_type))
-
-        if local_file:
-            # Download file content:
-            res = requests.get(file_url, stream=True)
-            if callable(getattr(local_file, 'write', None)):  # Does it quack?
-                po_file = local_file
+        if local_file is not False:
+           
+            # Setup a file context manager
+            if local_file is None:
+                context_manager = tempfile.NamedTemporaryFile(delete=False, suffix='.{}'.format(file_type))
+                local_file = context_manager.name
+            elif callable(getattr(local_file, 'write', None)):  # Does it quack?
+                # If the caller of this export method passed a local_file writable object,
+                # it is their responsibility to eventually close it.
+                context_manager = nullcontext(local_file)
+            elif isinstance(local_file, str):
+                context_manager = open(local_file, 'w+b')
             else:
-                po_file = open(local_file, 'w+b')
-            for data in res.iter_content(chunk_size=1024):
-                po_file.write(data)
-        else:
-            po_file = None
-        return file_url, po_file
+                raise ValueError(f"Unexpected value for local_file={local_file}")
+
+            # Download the file
+            res = requests.get(file_url, stream=True)
+
+            with context_manager as f:
+                for data in res.iter_content(chunk_size=1024):
+                    f.write(data)
+
+        return file_url, local_file
 
     def _upload(self, project_id, updating, file_path, language_code=None,
                 overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
