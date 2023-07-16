@@ -331,6 +331,22 @@ class POEditorAPI(object):
         )
         return data['result']['terms']
 
+    def update_terms(self, project_id, data, fuzzy_trigger=None):
+        """
+        Updates project terms. Lets you change the text, context, reference, plural and tags.
+        """
+        kwargs = {}
+        if fuzzy_trigger is not None:
+            kwargs['fuzzy_trigger'] = fuzzy_trigger
+
+        data = self._run(
+            url_path="terms/update",
+            id=project_id,
+            data=json.dumps(data),
+            **kwargs
+        )
+        return data['result']['terms']
+
     def delete_terms(self, project_id, data):
         """
         Deletes terms from project.
