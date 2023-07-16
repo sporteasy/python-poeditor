@@ -186,7 +186,7 @@ class POEditorAPI(object):
         return data['result']['project']['id']
 
     def update_project(self, project_id, name=None, description=None,
-                       reference_language=None):
+                       reference_language=None, fallback_language=None):
         """
         Updates project settings (name, description, reference language)
         If optional parameters are not sent, their respective fields are not updated.
@@ -198,6 +198,8 @@ class POEditorAPI(object):
             kwargs['description'] = description
         if reference_language is not None:
             kwargs['reference_language'] = reference_language
+        if fallback_language is not None:
+            kwargs['fallback_language'] = fallback_language
 
         data = self._run(
             url_path="projects/update",
