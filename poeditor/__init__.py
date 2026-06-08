@@ -1,5 +1,5 @@
 """
-    API Client Interface for POEditor API (https://poeditor.com).
+    API Client for POEditor API (https://poeditor.com).
 
     Usage:
 
