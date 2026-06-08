@@ -467,13 +467,14 @@ class POEditorAPI(object):
         return data['result']['translations']
 
     def export(self, project_id, language_code, file_type='po', filters=None,
-               tags=None, order=None, options=None, local_file=None):
+               tags=None, order=None, fallback_language=None, options=None, local_file=None):
         """
         Return terms / translations
 
         filters - filter by self._filter_by
         tags - filter results by tags;
         order - Set it to 'terms' to order results by 'terms' alphabetically.
+        fallback_language - The language code of the fallback language
         options - Set specific advanced options for particular formats (where these exist).
             The value must be a JSON array of objects. Can be used to export in Android XML
             format without wrapping the strings in quotes: options=[{"unquoted": 1}]
@@ -507,6 +508,7 @@ class POEditorAPI(object):
             filters=filters,
             tags=tags,
             order=order,
+            fallback_language=fallback_language,
             options=options
         )
         # The link of the file (expires after 10 minutes).
@@ -698,7 +700,7 @@ class POEditorAPI(object):
         )
         return data['result'].get('contributors', [])
 
-    def add_contributor(self, project_id, name, email, language_code):
+    def add_contributor(self, project_id, name, email, language_code, proofreader=None):
         """
         Adds a contributor to a project language
         """
@@ -707,7 +709,8 @@ class POEditorAPI(object):
             id=project_id,
             name=name,
             email=email,
-            language=language_code
+            language=language_code,
+            proofreader='1' if proofreader else None
         )
         return True
 
