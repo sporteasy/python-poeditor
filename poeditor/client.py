@@ -536,12 +536,13 @@ class POEditorAPI(object):
 
         return file_url, local_file
 
-    def _upload(self, project_id, updating, file_path, language_code=None,
-                overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
+    def upload(self, project_id, updating, file_path, language_code=None,
+                overwrite=False, sync_terms=False, tags=None, read_from_source=None,
+                fuzzy_trigger=None, type=None):
         """
         Internal: updates terms / translations
 
-        File uploads are limited to one every 30 seconds
+        File uploads are limited to one every 20 seconds
         """
         options = [
             self.UPDATING_TERMS,
@@ -575,6 +576,14 @@ class POEditorAPI(object):
         fuzzy_trigger = '1' if fuzzy_trigger else '0'
         project_id = str(project_id)
 
+        kwargs = {}
+        if tags:
+            kwargs['tags'] = tags
+        if read_from_source is not None:
+            kwargs['read_from_source'] = read_from_source
+        if type is not None:
+            kwargs['type'] = type
+
         with open(file_path, 'r+b') as local_file:
             data = self._run(
                 url_path="projects/upload",
@@ -585,7 +594,7 @@ class POEditorAPI(object):
                 tags=tags,
                 sync_terms=sync_terms,
                 overwrite=overwrite,
-                fuzzy_trigger=fuzzy_trigger
+                fuzzy_trigger=fuzzy_trigger,
                 **kwargs
             )
         return data['result']
@@ -625,7 +634,7 @@ class POEditorAPI(object):
         fuzzy_trigger: set it to True to mark corresponding translations from the
             other languages as fuzzy for the updated values
         """
-        return self._upload(
+        return self.upload(
             project_id=project_id,
             updating=self.UPDATING_TERMS_TRANSLATIONS,
             file_path=file_path,
@@ -659,7 +668,7 @@ class POEditorAPI(object):
         fuzzy_trigger: set it to True to mark corresponding translations from the
             other languages as fuzzy for the updated values
         """
-        return self._upload(
+        return self.upload(
             project_id=project_id,
             updating=self.UPDATING_TRANSLATIONS,
             file_path=file_path,
