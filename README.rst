@@ -45,7 +45,7 @@ All requests to the API must contain the parameter api_token. You can get this
 key from your POEditor account. You'll find it in `My Account > API Access <https://poeditor.com/account/api>`_::
 
   $ export POEDITOR_TOKEN=my_token
-  $ nosetests
+  $ python -m unittest
 
 License
 -------

@@ -29,5 +29,4 @@ setup(
     ],
     install_requires=['requests'],
     license='MIT',
-    test_suite="nose.collector",
 )
