@@ -586,36 +586,9 @@ class POEditorAPI(object):
                 sync_terms=sync_terms,
                 overwrite=overwrite,
                 fuzzy_trigger=fuzzy_trigger
+                **kwargs
             )
         return data['result']
-
-    def update_terms(self, project_id, file_path=None, language_code=None,
-                     overwrite=False, sync_terms=False, tags=None, fuzzy_trigger=None):
-        """
-        Updates terms
-
-        overwrite: set it to True if you want to overwrite translations
-        sync_terms: set it to True if you want to sync your terms (terms that
-            are not found in the uploaded file will be deleted from project
-            and the new ones added). Ignored if updating = translations
-        tags: Add tags to the project terms; available when updating terms or terms_translations;
-              you can use the following keys: "all" - for the all the imported terms, "new" - for
-              the terms which aren't already in the project, "obsolete" - for the terms which are
-              in the project but not in the imported file and "overwritten_translations" - for the
-              terms for which translations change
-        fuzzy_trigger: set it to True to mark corresponding translations from the
-            other languages as fuzzy for the updated values
-        """
-        return self._upload(
-            project_id=project_id,
-            updating=self.UPDATING_TERMS,
-            file_path=file_path,
-            language_code=language_code,
-            overwrite=overwrite,
-            sync_terms=sync_terms,
-            tags=tags,
-            fuzzy_trigger=fuzzy_trigger
-        )
 
     def update_terms_definitions(self, project_id, file_path=None,
                                  language_code=None, overwrite=False,
