@@ -593,7 +593,6 @@ class POEditorAPI(object):
                 language=language_code,
                 file=local_file,
                 updating=updating,
-                tags=tags,
                 sync_terms=sync_terms,
                 overwrite=overwrite,
                 fuzzy_trigger=fuzzy_trigger,
